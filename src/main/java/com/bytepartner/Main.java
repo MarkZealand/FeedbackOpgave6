@@ -5,17 +5,47 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
-    public static void main(String[] args) throws ClassNotFoundException, SQLException {
 
+    private final Db db = new Db();
+
+    public static void main(String[] args) {
+        new Main().run();
+    }
+
+    public void run() {
         List<Character> characters = new ArrayList<>();
 
-        dbQuery result = getResult();
+        try {
+            testConnection();
 
-        processResults(result, characters);
+            try (Connection connection = db.get();
+                 Statement statement = connection.createStatement();
+                 ResultSet resultSet = statement.executeQuery(
+                         "SELECT * FROM characters.character_classes")) {
+
+                processResults(resultSet, characters);
+
+            } // connection, statement og resultSet lukkes automatisk her
+
+        } catch (SQLException e) {
+            System.out.println("❌ Database fejl: " + e.getMessage());
+            System.out.println("   SQLState: " + e.getSQLState());
+        } catch (Exception e) {
+            System.out.println("❌ Uventet fejl: " + e.getMessage());
+        }
 
         loopThroughCharacterObjects(characters);
+    }
 
-        closeConnections(result);
+    public void testConnection() {
+        try (Connection c = db.get()) {
+            DatabaseMetaData md = c.getMetaData();
+            System.out.println("✅ Forbindelse OK: " + md.getURL());
+            System.out.println("   Driver: " + md.getDriverName() + " - " + md.getDriverVersion());
+        } catch (Exception e) {
+            System.out.println("❌ Forbindelse FEJL: " + e.getMessage());
+            System.out.println("Tip: Tjek URL/USER/PASS og at MySQL kører.");
+        }
     }
 
     private static void loopThroughCharacterObjects(List<Character> characters) {
@@ -25,59 +55,32 @@ public class Main {
         }
     }
 
-    private static void closeConnections(dbQuery result) throws SQLException {
-        result.resultSet().close();
-        result.statement().close();
-        result.connection().close();
-    }
+    private static void processResults(ResultSet resultSet, List<Character> characters)
+            throws SQLException {
+        while (resultSet.next()) {
+            String className     = resultSet.getString("class_name");
+            String characterName = resultSet.getString("character_name");
+            int characterAge     = resultSet.getInt("character_age");
+            int characterLevel   = resultSet.getInt("character_level");
 
-    private static void processResults(dbQuery result, List<Character> characters) throws SQLException {
-        while (result.resultSet().next()) {
-            String className = result.resultSet().getString("class_name");
-            String characterName = result.resultSet().getString("character_name");
-            int characterAge = result.resultSet().getInt("character_age");
-            int characterLevel = result.resultSet().getInt("character_level");
-            System.out.println("Class: " + className + " | Character: " + characterName + " | Age: " + characterAge + " | Level: " + characterLevel);
+            System.out.println("Class: " + className
+                    + " | Character: " + characterName
+                    + " | Age: " + characterAge
+                    + " | Level: " + characterLevel);
 
             addClassesToList(className, characterName, characterAge, characterLevel, characters);
         }
     }
 
-    private static void addClassesToList(String className, String characterName, int characterAge, int characterLevel, List<Character> characters) {
-        switch(className) {
-            case "Jedi":
-                Jedi jedi = new Jedi(characterName, characterAge, characterLevel);
-                characters.add(jedi);
-                break;
-            case "Sith":
-                Sith sith = new Sith(characterName, characterAge, characterLevel);
-                characters.add(sith);
-                break;
-            case "CloneTrooper":
-                CloneTrooper cloneTrooper = new CloneTrooper(characterName, characterAge, characterLevel);
-                characters.add(cloneTrooper);
-                break;
-            case "Droid":
-                Droid droid = new Droid(characterName, characterAge, characterLevel);
-                characters.add(droid);
-                break;
-            default:
-                System.out.println("Unknown class: " + className);
+    private static void addClassesToList(String className, String characterName,
+                                         int characterAge, int characterLevel,
+                                         List<Character> characters) {
+        switch (className) {
+            case "Jedi"         -> characters.add(new Jedi(characterName, characterAge, characterLevel));
+            case "Sith"         -> characters.add(new Sith(characterName, characterAge, characterLevel));
+            case "CloneTrooper" -> characters.add(new CloneTrooper(characterName, characterAge, characterLevel));
+            case "Droid"        -> characters.add(new Droid(characterName, characterAge, characterLevel));
+            default             -> System.out.println("Unknown class: " + className);
         }
-    }
-
-    private static dbQuery getResult() throws ClassNotFoundException, SQLException {
-        Class.forName("com.mysql.cj.jdbc.Driver");
-        Connection connection = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/", "root", "*******"
-        );
-
-        Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery("SELECT * FROM characters.character_classes");
-        dbQuery result = new dbQuery(connection, statement, resultSet);
-        return result;
-    }
-
-    private record dbQuery(Connection connection, Statement statement, ResultSet resultSet) {
     }
 }
