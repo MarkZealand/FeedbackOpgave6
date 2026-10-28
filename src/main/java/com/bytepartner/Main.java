@@ -8,11 +8,8 @@ public class Main {
 
     private final Db db = new Db();
 
-    public static void main(String[] args) {
-        new Main().run();
-    }
+    public void main(String[] args) {
 
-    public void run() {
         List<Character> characters = new ArrayList<>();
 
         try {
@@ -36,6 +33,8 @@ public class Main {
 
         loopThroughCharacterObjects(characters);
     }
+
+
 
     public void testConnection() {
         try (Connection c = db.get()) {
