@@ -12,6 +12,12 @@ public class Main {
 
         List<Character> characters = new ArrayList<>();
 
+        dbQuery(characters);
+
+        loopThroughCharacterObjects(characters);
+    }
+
+    private void dbQuery(List<Character> characters) {
         try {
             testConnection();
 
@@ -30,10 +36,7 @@ public class Main {
         } catch (Exception e) {
             System.out.println("❌ Uventet fejl: " + e.getMessage());
         }
-
-        loopThroughCharacterObjects(characters);
     }
-
 
 
     public void testConnection() {
